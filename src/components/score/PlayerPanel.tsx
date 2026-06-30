@@ -100,7 +100,8 @@ export default function PlayerPanel({ side, flipped, players }: Props) {
           </button>
           <button
             onPointerDown={(e) => { e.preventDefault(); increment(side); }}
-            className="flex h-24 w-24 items-center justify-center rounded-2xl bg-primary/80 text-primary-foreground active:scale-95 active:bg-primary transition-transform"
+            disabled={player.score >= 8}
+            className="flex h-24 w-24 items-center justify-center rounded-2xl bg-primary/80 text-primary-foreground active:scale-95 active:bg-primary transition-transform disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100"
             aria-label="Increase score"
           >
             <Plus size={36} />

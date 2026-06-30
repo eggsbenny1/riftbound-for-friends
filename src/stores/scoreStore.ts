@@ -21,7 +21,8 @@ interface ScoreStore {
   setPlayer: (side: 'player1' | 'player2', name: string, id?: string | null) => void;
   increment: (side: 'player1' | 'player2') => void;
   decrement: (side: 'player1' | 'player2') => void;
-  confirmGame: () => void; // called when user presses "Next Match"
+  confirmGame: () => void;
+  undoWin: () => void; // dismiss overlay, return to score state (score stays at 8)
   resetGame: () => void;
   resetMatch: () => void;
 }
@@ -102,6 +103,22 @@ export const useScoreStore = create<ScoreStore>((set, get) => ({
         [gKey]: newGames,
         game_winner: null,
       });
+    }
+  },
+
+  undoWin: () => {
+    const state = get();
+    if (state.match_over) {
+      const side = state.winner!;
+      const gKey = side === 'player1' ? 'games_p1' : 'games_p2';
+      if (state.format === 'bo1') {
+        set({ match_over: false, winner: null, games_p1: 0, games_p2: 0 });
+      } else {
+        // Back to game_winner state with the circle undone
+        set({ match_over: false, winner: null, game_winner: side, [gKey]: state[gKey] - 1 });
+      }
+    } else if (state.game_winner) {
+      set({ game_winner: null });
     }
   },
 

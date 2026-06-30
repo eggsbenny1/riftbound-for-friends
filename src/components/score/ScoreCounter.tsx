@@ -82,6 +82,12 @@ export default function ScoreCounter() {
           >
             Next Game →
           </button>
+          <button
+            onClick={() => store.undoWin()}
+            className="text-xs text-white/40 hover:text-white/70 transition-colors mt-1"
+          >
+            ← Go back
+          </button>
         </div>
       )}
 
@@ -109,6 +115,12 @@ export default function ScoreCounter() {
               <RotateCcw size={16} /> New Match
             </button>
           </div>
+          <button
+            onClick={() => store.undoWin()}
+            className="text-xs text-white/40 hover:text-white/70 transition-colors"
+          >
+            ← Go back
+          </button>
         </div>
       )}
 
