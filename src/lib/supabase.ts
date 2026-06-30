@@ -26,6 +26,11 @@ export async function signInWithPassword(email: string, password: string) {
   return { session: data.session, user: data.user, error };
 }
 
+export async function signInAsGuest() {
+  const { data, error } = await supabase.auth.signInAnonymously();
+  return { session: data.session, user: data.user, error };
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   return { error };

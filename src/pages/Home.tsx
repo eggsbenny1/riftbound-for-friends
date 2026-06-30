@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/stores/authStore';
 import PlayerCard from '@/components/player/PlayerCard';
 import type { Card, Deck, Player, PlayerStats } from '@/types';
 
@@ -11,6 +12,7 @@ type PlayerRow = Player & {
 };
 
 export default function Home() {
+  const isGuest = useAuthStore((s) => s.isGuest);
   const [players, setPlayers] = useState<PlayerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,15 +77,17 @@ export default function Home() {
             </p>
           )}
         </div>
-        <Link
-          to="/admin"
-          className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2
-            text-sm font-medium text-muted-foreground shadow-card
-            hover:text-foreground hover:border-border/80 transition-colors"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Add Player
-        </Link>
+        {!isGuest && (
+          <Link
+            to="/admin"
+            className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2
+              text-sm font-medium text-muted-foreground shadow-card
+              hover:text-foreground hover:border-border/80 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Player
+          </Link>
+        )}
       </div>
 
       {/* Loading skeletons */}

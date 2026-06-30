@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Session, User } from '@supabase/supabase-js';
 import {
   signInWithPassword,
+  signInAsGuest as supabaseSignInAsGuest,
   signOut as supabaseSignOut,
   getCurrentSession,
   onAuthStateChange,
@@ -10,12 +11,14 @@ import {
 type AuthState = {
   session: Session | null;
   user: User | null;
-  isLoading: boolean;        // true until the initial session check completes
+  isLoading: boolean;
   isAuthenticated: boolean;
+  isGuest: boolean;
   error: string | null;
 
   initialize: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signInAsGuest: () => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   clearError: () => void;
 };
@@ -25,6 +28,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: true,
   isAuthenticated: false,
+  isGuest: false,
   error: null,
 
   // Call once on app mount (see App.tsx). Restores any existing session
@@ -36,6 +40,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       session,
       user: session?.user ?? null,
       isAuthenticated: !!session,
+      isGuest: session?.user?.is_anonymous ?? false,
       isLoading: false,
     });
 
@@ -44,6 +49,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         session,
         user,
         isAuthenticated: !!session,
+        isGuest: user?.is_anonymous ?? false,
       });
     });
   },
@@ -60,7 +66,18 @@ export const useAuthStore = create<AuthState>((set) => ({
       return { success: false, error: message };
     }
 
-    set({ session, user, isAuthenticated: !!session });
+    set({ session, user, isAuthenticated: !!session, isGuest: user?.is_anonymous ?? false });
+    return { success: true };
+  },
+
+  signInAsGuest: async () => {
+    set({ error: null });
+    const { session, user, error } = await supabaseSignInAsGuest();
+    if (error) {
+      set({ error: error.message });
+      return { success: false, error: error.message };
+    }
+    set({ session, user, isAuthenticated: !!session, isGuest: true });
     return { success: true };
   },
 

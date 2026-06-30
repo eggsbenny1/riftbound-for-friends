@@ -1,21 +1,23 @@
 import { NavLink } from 'react-router-dom';
 import { Users, History, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/authStore';
 
 const NAV_ITEMS = [
-  { label: 'Players', to: '/', icon: Users },
-  { label: 'Matches', to: '/matches', icon: History },
-  { label: 'Admin', to: '/admin', icon: Shield },
+  { label: 'Players', to: '/', icon: Users, adminOnly: false },
+  { label: 'Matches', to: '/matches', icon: History, adminOnly: false },
+  { label: 'Admin', to: '/admin', icon: Shield, adminOnly: true },
 ];
 
 export default function BottomNav() {
+  const isGuest = useAuthStore((s) => s.isGuest);
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/60 bg-background/90 backdrop-blur-xl md:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="flex items-stretch justify-around px-2">
-        {NAV_ITEMS.map(({ label, to, icon: Icon }) => (
+        {NAV_ITEMS.filter(({ adminOnly }) => !(adminOnly && isGuest)).map(({ label, to, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}

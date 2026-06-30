@@ -6,11 +6,12 @@ import { cn } from '@/lib/utils';
 const NAV_ITEMS = [
   { label: 'Players', to: '/' },
   { label: 'Matches', to: '/matches' },
-  { label: 'Admin', to: '/admin' },
+  { label: 'Admin', to: '/admin', adminOnly: true },
 ];
 
 export default function NavBar() {
   const signOut = useAuthStore((s) => s.signOut);
+  const isGuest = useAuthStore((s) => s.isGuest);
 
   return (
     <header className="hidden md:block sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur-xl">
@@ -30,7 +31,7 @@ export default function NavBar() {
 
         {/* Nav links */}
         <nav className="flex items-center gap-0.5">
-          {NAV_ITEMS.map(({ label, to }) => (
+          {NAV_ITEMS.filter(({ adminOnly }) => !(adminOnly && isGuest)).map(({ label, to }) => (
             <NavLink
               key={to}
               to={to}

@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import { cn } from '@/lib/utils';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
@@ -16,7 +17,9 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const signIn = useAuthStore((s) => s.signIn);
+  const signInAsGuest = useAuthStore((s) => s.signInAsGuest);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGuestLoading, setIsGuestLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
@@ -34,6 +37,15 @@ export default function Login() {
     navigate(redirectTo, { replace: true });
   }
 
+  async function onGuest() {
+    setIsGuestLoading(true);
+    setFormError(null);
+    const result = await signInAsGuest();
+    setIsGuestLoading(false);
+    if (!result.success) { setFormError(result.error ?? 'Something went wrong. Try again.'); return; }
+    navigate(redirectTo, { replace: true });
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       {/* Subtle radial glow behind the card */}
@@ -47,13 +59,10 @@ export default function Login() {
       <div className="relative w-full max-w-[360px]">
         {/* Header */}
         <div className="mb-10 text-center">
-          <div className="mb-3 inline-flex items-baseline gap-2">
+          <div className="inline-flex items-baseline gap-2">
             <span className="text-3xl font-bold tracking-tight text-foreground">Riftbound</span>
             <span className="text-3xl font-light tracking-tight text-muted-foreground">for friends</span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Sign in to access the tracker
-          </p>
         </div>
 
         {/* Card */}
@@ -93,7 +102,7 @@ export default function Login() {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isGuestLoading}
               className="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold
                 text-primary-foreground shadow-primary transition-all
                 hover:brightness-110 active:scale-[0.98]
@@ -102,11 +111,27 @@ export default function Login() {
               {isSubmitting ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
-        </div>
 
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          Shared login — ask whoever set up the tracker for the password.
-        </p>
+          {/* Divider */}
+          <div className="mt-5 flex items-center gap-3">
+            <div className="flex-1 h-px bg-border/60" />
+            <span className="text-xs text-muted-foreground">or</span>
+            <div className="flex-1 h-px bg-border/60" />
+          </div>
+
+          {/* Guest button */}
+          <button
+            onClick={onGuest}
+            disabled={isSubmitting || isGuestLoading}
+            className={cn(
+              'mt-4 w-full rounded-xl border border-border px-4 py-3 text-sm font-semibold transition-all',
+              'text-muted-foreground hover:text-foreground hover:border-border/80',
+              'active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed'
+            )}
+          >
+            {isGuestLoading ? 'Continuing…' : 'Continue as Guest'}
+          </button>
+        </div>
       </div>
     </div>
   );
