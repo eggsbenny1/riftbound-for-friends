@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import PlayerCard from '@/components/player/PlayerCard';
-import type { Player, PlayerStats, Deck, Card } from '@/types';
+import type { Card, Deck, Player, PlayerStats } from '@/types';
 
 type PlayerRow = Player & {
   stats: PlayerStats | null;
-  activeDeck: (Deck & { legend_image_url?: string | null }) | null;
+  activeDeck: (Deck & { legend_image_url?: string | null; legend?: Card | null }) | null;
 };
 
 export default function Home() {
@@ -14,50 +15,41 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      setError(null);
+  useEffect(() => { load(); }, []);
 
-      // 1. Fetch all active players
-      const { data: playerRows, error: pErr } = await supabase
-        .from('players')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_name');
+  async function load() {
+    setLoading(true);
+    setError(null);
 
-      if (pErr) { setError(pErr.message); setLoading(false); return; }
-      if (!playerRows?.length) { setPlayers([]); setLoading(false); return; }
+    const { data: playerRows, error: pErr } = await supabase
+      .from('players')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_name');
 
-      const playerIds = playerRows.map((p) => p.id);
+    if (pErr) { setError(pErr.message); setLoading(false); return; }
+    if (!playerRows?.length) { setPlayers([]); setLoading(false); return; }
 
-      // 2. Fetch player_stats for those players
-      const { data: statsRows } = await supabase
-        .from('player_stats')
-        .select('*')
-        .in('player_id', playerIds);
+    const playerIds = playerRows.map((p) => p.id);
 
-      // 3. Fetch active decks with their legend card (for image_url)
-      const { data: deckRows } = await supabase
+    const [{ data: statsRows }, { data: deckRows }] = await Promise.all([
+      supabase.from('player_stats').select('*').in('player_id', playerIds),
+      supabase
         .from('decks')
-        .select(`
-          *,
-          legend:legend_id (
-            id, name, tags, image_url, card_type
-          )
-        `)
+        .select('*, legend:legend_id(id, name, tags, image_url, card_type)')
         .in('player_id', playerIds)
-        .eq('is_active', true);
+        .eq('is_active', true),
+    ]);
 
-      // Build lookup maps
-      const statsMap = new Map<string, PlayerStats>(
-        (statsRows ?? []).map((s: PlayerStats & { player_id: string }) => [s.player_id, s])
-      );
-      const deckMap = new Map<string, Deck & { legend: Card | null }>(
-        (deckRows ?? []).map((d: Deck & { legend: Card | null }) => [d.player_id, d])
-      );
+    const statsMap = new Map<string, PlayerStats>(
+      (statsRows ?? []).map((s: any) => [s.player_id, s])
+    );
+    const deckMap = new Map<string, any>(
+      (deckRows ?? []).map((d: any) => [d.player_id, d])
+    );
 
-      const combined: PlayerRow[] = playerRows.map((p) => {
+    setPlayers(
+      playerRows.map((p) => {
         const deck = deckMap.get(p.id) ?? null;
         return {
           ...p,
@@ -66,63 +58,75 @@ export default function Home() {
             ? { ...deck, legend_image_url: deck.legend?.image_url ?? null }
             : null,
         };
-      });
-
-      setPlayers(combined);
-      setLoading(false);
-    }
-
-    load();
-  }, []);
+      })
+    );
+    setLoading(false);
+  }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Crew</h1>
+    <div className="mx-auto max-w-5xl">
+      {/* Page header */}
+      <div className="mb-8 flex items-end justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Crew</h1>
+          {!loading && players.length > 0 && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {players.length} player{players.length !== 1 ? 's' : ''}
+            </p>
+          )}
+        </div>
         <Link
           to="/admin"
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2
+            text-sm font-medium text-muted-foreground shadow-card
+            hover:text-foreground hover:border-border/80 transition-colors"
         >
-          + Add Player
+          <Plus className="h-3.5 w-3.5" />
+          Add Player
         </Link>
       </div>
 
+      {/* Loading skeletons */}
       {loading && (
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid gap-5 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-64 animate-pulse rounded-2xl bg-muted" />
+            <div
+              key={i}
+              className="h-72 animate-pulse rounded-2xl bg-card border border-border/40"
+            />
           ))}
         </div>
       )}
 
+      {/* Error */}
       {!loading && error && (
-        <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+        <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-sm text-destructive">
           Failed to load players: {error}
         </div>
       )}
 
+      {/* Empty state */}
       {!loading && !error && players.length === 0 && (
-        <div className="flex flex-col items-center gap-3 py-24 text-center text-muted-foreground">
-          <p className="text-lg font-medium">No players yet.</p>
-          <p className="text-sm">Head to Admin to add your crew.</p>
+        <div className="flex flex-col items-center gap-4 py-32 text-center">
+          <p className="text-xl font-semibold text-foreground">No players yet</p>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            Add your crew members in Admin to get started tracking matches.
+          </p>
           <Link
             to="/admin"
-            className="mt-2 rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="mt-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold
+              text-primary-foreground shadow-primary hover:brightness-110 transition-all"
           >
             Go to Admin
           </Link>
         </div>
       )}
 
+      {/* Player grid */}
       {!loading && !error && players.length > 0 && (
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid gap-5 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
           {players.map((p) => (
-            <PlayerCard
-              key={p.id}
-              player={p}
-              stats={p.stats}
-              activeDeck={p.activeDeck}
-            />
+            <PlayerCard key={p.id} player={p} stats={p.stats} activeDeck={p.activeDeck} />
           ))}
         </div>
       )}

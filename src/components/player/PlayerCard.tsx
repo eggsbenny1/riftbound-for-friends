@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import type { Player, PlayerStats, Deck } from '@/types';
 
 type Props = {
@@ -8,40 +9,61 @@ type Props = {
 };
 
 export default function PlayerCard({ player, stats, activeDeck }: Props) {
-  const winRate =
-    stats && stats.total_games > 0
-      ? `${stats.win_rate_pct ?? 0}%`
-      : '—';
+  const wins = stats?.wins ?? 0;
+  const losses = stats?.losses ?? 0;
+  const total = stats?.total_games ?? 0;
+  const wr = total > 0 ? (stats?.win_rate_pct ?? 0) : null;
 
   const legendImg = activeDeck?.legend_image_url ?? null;
+  const legendName = (activeDeck as any)?.legend?.tags ?? (activeDeck as any)?.legend?.name ?? null;
 
   return (
     <Link
       to={`/players/${player.id}`}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-card shadow-lg transition-transform hover:-translate-y-1 hover:shadow-xl"
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-border/60
+        bg-card shadow-card transition-all duration-300
+        hover:-translate-y-1.5 hover:shadow-card-hover hover:border-border"
     >
-      {/* Legend art background */}
-      <div className="relative h-36 w-full overflow-hidden bg-muted">
+      {/* Legend art hero */}
+      <div className="relative h-40 w-full overflow-hidden bg-muted">
         {legendImg ? (
-          <img
-            src={legendImg}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover object-top opacity-60 transition-opacity group-hover:opacity-80"
-          />
+          <>
+            <img
+              src={legendImg}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover object-top
+                transition-transform duration-500 group-hover:scale-105"
+            />
+            {/* Gradient fade to card bg */}
+            <div className="absolute inset-0 bg-legend-fade" />
+          </>
         ) : (
           <div
-            className="absolute inset-0"
-            style={{ background: `linear-gradient(135deg, ${player.color}33 0%, ${player.color}11 100%)` }}
+            className="absolute inset-0 opacity-20"
+            style={{
+              background: `radial-gradient(ellipse at 50% 0%, ${player.color}, transparent 70%)`,
+            }}
           />
         )}
-        {/* Gradient overlay so text is always readable */}
-        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent" />
+
+        {/* Win rate pill — top right */}
+        {wr !== null && (
+          <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full
+            bg-black/50 backdrop-blur-sm px-2.5 py-1">
+            <span
+              className="text-xs font-bold tabular"
+              style={{ color: wr >= 50 ? '#4ade80' : '#f87171' }}
+            >
+              {wr}%
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Avatar + name */}
-      <div className="relative -mt-10 flex flex-col items-center px-4 pb-4">
+      {/* Avatar — bridges the art/info sections */}
+      <div className="relative -mt-8 flex flex-col items-center px-5 pb-5">
         <div
-          className="h-20 w-20 overflow-hidden rounded-full border-4 shadow-md"
+          className="h-16 w-16 overflow-hidden rounded-2xl border-2 shadow-lg shrink-0"
           style={{ borderColor: player.color }}
         >
           {player.avatar_url ? (
@@ -52,7 +74,7 @@ export default function PlayerCard({ player, stats, activeDeck }: Props) {
             />
           ) : (
             <div
-              className="flex h-full w-full items-center justify-center text-2xl font-bold text-white"
+              className="flex h-full w-full items-center justify-center text-xl font-bold text-white"
               style={{ background: player.color }}
             >
               {player.display_name[0]?.toUpperCase()}
@@ -60,31 +82,43 @@ export default function PlayerCard({ player, stats, activeDeck }: Props) {
           )}
         </div>
 
-        <h2 className="mt-2 text-lg font-bold leading-tight text-foreground">
+        {/* Name + legend */}
+        <h2 className="mt-3 text-base font-bold leading-tight text-foreground text-center">
           {player.display_name}
         </h2>
-
-        {activeDeck?.legend && (
-          <p className="text-xs text-muted-foreground">
-            {activeDeck.legend.tags ?? activeDeck.legend.name}
-          </p>
+        {legendName ? (
+          <p className="mt-0.5 text-xs text-muted-foreground">{legendName}</p>
+        ) : (
+          <p className="mt-0.5 text-xs text-muted-foreground italic">No active deck</p>
         )}
 
+        {/* Divider */}
+        <div className="mt-4 mb-3 h-px w-full bg-border/60" />
+
         {/* Stats row */}
-        <div className="mt-3 flex w-full justify-around text-center text-sm">
+        <div className="flex w-full justify-around text-center">
           <div>
-            <div className="font-semibold text-foreground">{stats?.wins ?? 0}</div>
-            <div className="text-xs text-muted-foreground">W</div>
-          </div>
-          <div>
-            <div className="font-semibold text-foreground">{stats?.losses ?? 0}</div>
-            <div className="text-xs text-muted-foreground">L</div>
-          </div>
-          <div>
-            <div className="font-semibold" style={{ color: player.color }}>
-              {winRate}
+            <div className={cn('stat-number', wins > 0 ? 'text-green-400' : 'text-muted-foreground')}>
+              {wins}
             </div>
-            <div className="text-xs text-muted-foreground">WR</div>
+            <div className="stat-label">W</div>
+          </div>
+          <div className="w-px bg-border/60" />
+          <div>
+            <div className={cn('stat-number', losses > 0 ? 'text-red-400' : 'text-muted-foreground')}>
+              {losses}
+            </div>
+            <div className="stat-label">L</div>
+          </div>
+          <div className="w-px bg-border/60" />
+          <div>
+            <div
+              className="stat-number"
+              style={{ color: total === 0 ? undefined : wr! >= 50 ? '#4ade80' : '#f87171' }}
+            >
+              {total === 0 ? '—' : `${wr}%`}
+            </div>
+            <div className="stat-label">WR</div>
           </div>
         </div>
       </div>

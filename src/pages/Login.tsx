@@ -19,100 +19,93 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormValues>({
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
 
-  // After login, return the user to wherever they were headed
-  // (e.g. they tapped a deep link to /score before being signed in).
   const redirectTo = (location.state as { from?: string })?.from ?? '/';
 
   async function onSubmit(values: LoginFormValues) {
     setIsSubmitting(true);
     setFormError(null);
-
     const result = await signIn(values.email, values.password);
-
     setIsSubmitting(false);
-
-    if (!result.success) {
-      setFormError(result.error ?? 'Something went wrong. Try again.');
-      return;
-    }
-
+    if (!result.success) { setFormError(result.error ?? 'Something went wrong. Try again.'); return; }
     navigate(redirectTo, { replace: true });
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold tracking-tight">Riftbound Crew Tracker</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Sign in with the shared crew login
+      {/* Subtle radial glow behind the card */}
+      <div
+        className="pointer-events-none fixed inset-0 opacity-30"
+        style={{
+          background: 'radial-gradient(ellipse 60% 50% at 50% 50%, hsl(252 87% 67% / 0.15) 0%, transparent 70%)',
+        }}
+      />
+
+      <div className="relative w-full max-w-[360px]">
+        {/* Header */}
+        <div className="mb-10 text-center">
+          <div className="mb-3 inline-flex items-baseline gap-2">
+            <span className="text-2xl font-bold tracking-tight text-foreground">Riftbound</span>
+            <span className="text-2xl font-light tracking-tight text-muted-foreground">Crew</span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Sign in to access the tracker
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-          <div className="space-y-1.5">
-            <label htmlFor="email" className="text-sm font-medium">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="crew@example.com"
-              className="w-full rounded-md border border-input bg-secondary px-3 py-2.5
-                text-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring"
-              {...register('email')}
-            />
-            {errors.email && (
-              <p className="text-xs text-destructive">{errors.email.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <label htmlFor="password" className="text-sm font-medium">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-              className="w-full rounded-md border border-input bg-secondary px-3 py-2.5
-                text-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring"
-              {...register('password')}
-            />
-            {errors.password && (
-              <p className="text-xs text-destructive">{errors.password.message}</p>
-            )}
-          </div>
-
-          {formError && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2">
-              <p className="text-sm text-destructive">{formError}</p>
+        {/* Card */}
+        <div className="card-surface p-8">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="label">Email</label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                placeholder="crew@example.com"
+                className="input"
+                {...register('email')}
+              />
+              {errors.email && <p className="err">{errors.email.message}</p>}
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-semibold
-              text-primary-foreground transition-opacity hover:opacity-90
-              disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
+            <div className="space-y-1.5">
+              <label htmlFor="password" className="label">Password</label>
+              <input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                placeholder="••••••••"
+                className="input"
+                {...register('password')}
+              />
+              {errors.password && <p className="err">{errors.password.message}</p>}
+            </div>
+
+            {formError && (
+              <div className="rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3">
+                <p className="text-sm text-destructive">{formError}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold
+                text-primary-foreground shadow-primary transition-all
+                hover:brightness-110 active:scale-[0.98]
+                disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? 'Signing in…' : 'Sign in'}
+            </button>
+          </form>
+        </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          Don't have the shared login? Ask whoever set up the crew tracker.
+          Shared login — ask whoever set up the tracker for the password.
         </p>
       </div>
     </div>
