@@ -42,7 +42,7 @@ export default function DeckEdit() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold mb-6">{isNew ? 'New Deck' : `Edit: ${deck?.name}`}</h1>
+      <h1 className="text-3xl font-bold tracking-tight mb-8">{isNew ? 'New Deck' : `Edit: ${deck?.name}`}</h1>
       <DeckBuilder
         playerId={playerId!}
         existingDeck={isNew ? undefined : (deck ?? undefined)}

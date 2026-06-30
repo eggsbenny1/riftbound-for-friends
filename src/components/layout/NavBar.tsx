@@ -21,7 +21,7 @@ export default function NavBar() {
             Riftbound
           </span>
           <span className="text-[15px] font-light tracking-tight text-muted-foreground">
-            Crew
+            for friends
           </span>
         </NavLink>
 

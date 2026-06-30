@@ -48,8 +48,8 @@ export default function Login() {
         {/* Header */}
         <div className="mb-10 text-center">
           <div className="mb-3 inline-flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-foreground">Riftbound</span>
-            <span className="text-2xl font-light tracking-tight text-muted-foreground">Crew</span>
+            <span className="text-3xl font-bold tracking-tight text-foreground">Riftbound</span>
+            <span className="text-3xl font-light tracking-tight text-muted-foreground">for friends</span>
           </div>
           <p className="text-sm text-muted-foreground">
             Sign in to access the tracker

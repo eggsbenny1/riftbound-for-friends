@@ -164,7 +164,7 @@ export default function PlayerProfile() {
             )}
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-white truncate">{player.display_name}</h1>
+            <h1 className="text-2xl font-bold text-white truncate">{player.display_name}</h1>
             {activeDeck?.legend_name && (
               <p className="text-sm text-white/60 mt-0.5">{activeDeck.legend_name}</p>
             )}

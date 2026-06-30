@@ -48,7 +48,7 @@ export default function Admin() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-6 text-2xl font-bold">Admin</h1>
+      <h1 className="mb-6 text-4xl font-bold tracking-tight">Admin</h1>
 
       <Tabs.Root defaultValue="players">
         <Tabs.List className="flex gap-1 border-b border-white/10 mb-6">

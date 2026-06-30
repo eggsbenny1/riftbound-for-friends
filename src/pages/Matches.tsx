@@ -46,7 +46,7 @@ export default function Matches() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Match History</h1>
+        <h1 className="text-4xl font-bold tracking-tight">Match History</h1>
         <Dialog.Root open={addOpen} onOpenChange={setAddOpen}>
           <Dialog.Trigger asChild>
             <button className="flex items-center gap-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">

@@ -68,7 +68,7 @@ export default function Home() {
       {/* Page header */}
       <div className="mb-8 flex items-end justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Crew</h1>
+          <h1 className="text-4xl font-bold tracking-tight">The Crew</h1>
           {!loading && players.length > 0 && (
             <p className="mt-1 text-sm text-muted-foreground">
               {players.length} player{players.length !== 1 ? 's' : ''}
