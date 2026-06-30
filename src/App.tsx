@@ -4,11 +4,18 @@ import { useAuthStore } from '@/stores/authStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import AppShell from '@/components/layout/AppShell';
 import Login from '@/pages/Login';
+import Home from '@/pages/Home';
+import PlayerProfile from '@/pages/PlayerProfile';
+import DeckEdit from '@/pages/DeckEdit';
+import DeckView from '@/pages/DeckView';
+import Matches from '@/pages/Matches';
+import ScorePage from '@/pages/ScorePage';
+import Admin from '@/pages/Admin';
 
-function Placeholder({ title }: { title: string }) {
+function NotFound() {
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
-      <h1 className="text-2xl font-semibold text-muted-foreground">{title}</h1>
+      <h1 className="text-2xl font-semibold text-muted-foreground">Page not found</h1>
     </div>
   );
 }
@@ -16,18 +23,15 @@ function Placeholder({ title }: { title: string }) {
 export default function App() {
   const initialize = useAuthStore((s) => s.initialize);
 
-  // Restore session + subscribe to auth changes once, on app mount.
   useEffect(() => {
     initialize();
   }, [initialize]);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/login" element={<Login />} />
 
-        {/* Every route below shares the AppShell layout (nav + FAB)
-            and requires the shared crew login */}
         <Route
           element={
             <ProtectedRoute>
@@ -35,17 +39,17 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          <Route path="/" element={<Placeholder title="Home — Player Grid" />} />
-          <Route path="/players/:id" element={<Placeholder title="Player Profile" />} />
-          <Route path="/players/:id/deck/new" element={<Placeholder title="New Deck" />} />
-          <Route path="/players/:id/deck/:deckId" element={<Placeholder title="Deck Viewer" />} />
-          <Route path="/players/:id/deck/:deckId/edit" element={<Placeholder title="Edit Deck" />} />
-          <Route path="/matches" element={<Placeholder title="Match History" />} />
-          <Route path="/score" element={<Placeholder title="Score Counter" />} />
-          <Route path="/admin" element={<Placeholder title="Admin" />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/players/:id" element={<PlayerProfile />} />
+          <Route path="/players/:id/deck/new" element={<DeckEdit />} />
+          <Route path="/players/:id/deck/:deckId" element={<DeckView />} />
+          <Route path="/players/:id/deck/:deckId/edit" element={<DeckEdit />} />
+          <Route path="/matches" element={<Matches />} />
+          <Route path="/score" element={<ScorePage />} />
+          <Route path="/admin" element={<Admin />} />
         </Route>
 
-        <Route path="*" element={<Placeholder title="Not Found" />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

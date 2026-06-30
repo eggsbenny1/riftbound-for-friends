@@ -43,6 +43,19 @@
   }
 }
 
+/* Form utility classes */
+@layer components {
+  .input {
+    @apply rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring;
+  }
+  .label {
+    @apply block mb-1 text-xs font-medium text-muted-foreground;
+  }
+  .err {
+    @apply mt-1 text-xs text-destructive;
+  }
+}
+
 /* Hide scrollbar on mobile nav strips but keep scrollability */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
