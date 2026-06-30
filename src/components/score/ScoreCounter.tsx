@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Trophy, RotateCcw } from 'lucide-react';
+import { Trophy, RotateCcw, Users, History, Shield } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useScoreStore } from '@/stores/scoreStore';
 import PlayerPanel from './PlayerPanel';
@@ -144,7 +145,7 @@ export default function ScoreCounter() {
         </div>
       )}
 
-      {/* Reset button — always available unless match over */}
+      {/* Reset button — bottom-right */}
       {!store.match_over && (
         <button
           onClick={() => store.resetMatch()}
@@ -152,6 +153,27 @@ export default function ScoreCounter() {
         >
           <RotateCcw size={12} /> Reset
         </button>
+      )}
+
+      {/* Compact nav — bottom-left, opposite the reset button */}
+      {!store.match_over && (
+        <div className="absolute bottom-4 left-4 z-10 flex items-center gap-1">
+          {[
+            { to: '/',        icon: Users,   label: 'Players' },
+            { to: '/matches', icon: History, label: 'Matches' },
+            { to: '/admin',   icon: Shield,  label: 'Admin'   },
+          ].map(({ to, icon: Icon, label }) => (
+            <Link
+              key={to}
+              to={to}
+              className="flex items-center gap-1 rounded-lg border border-white/10 bg-card/80 backdrop-blur-sm px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={label}
+            >
+              <Icon size={12} />
+              <span>{label}</span>
+            </Link>
+          ))}
+        </div>
       )}
 
       <SaveMatchModal

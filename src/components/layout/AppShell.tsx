@@ -17,7 +17,7 @@ export default function AppShell() {
         </div>
       </main>
 
-      <BottomNav />
+      {!isOnScorePage && <BottomNav />}
 
       {!isOnScorePage && <ScoreFAB />}
     </div>
