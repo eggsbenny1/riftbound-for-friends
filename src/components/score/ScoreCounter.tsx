@@ -19,7 +19,20 @@ export default function ScoreCounter() {
   const winnerName = store.winner === 'player1' ? store.player1.name : store.player2.name;
 
   return (
-    <div className="fixed inset-0 z-30 flex flex-col bg-background overflow-hidden">
+    <div className="fixed inset-0 z-30 flex flex-col overflow-hidden">
+      {/* Wallpaper */}
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: 'url(/score-wallpaper.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          filter: 'blur(12px) brightness(0.35) saturate(1.1)',
+          transform: 'scale(1.08)',
+        }}
+      />
+      {/* Dark overlay to ensure legibility */}
+      <div className="absolute inset-0 bg-black/40" />
       {/* Format selector — narrow strip in the middle */}
       <div className="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2">
         {/* Format pills */}
