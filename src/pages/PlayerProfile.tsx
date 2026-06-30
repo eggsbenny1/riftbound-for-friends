@@ -113,25 +113,28 @@ export default function PlayerProfile() {
   return (
     <div className="-mt-10 -mx-6">
       {/* ── Hero ─────────────────────────────────────────── */}
-      <div className="relative h-56 sm:h-72 overflow-hidden">
-        {/* Legend art — blurred, darkened */}
-        {legendImg ? (
-          <img
-            src={legendImg}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover object-top scale-110"
-            style={{ filter: 'blur(18px) brightness(0.35) saturate(1.2)' }}
-          />
-        ) : (
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `radial-gradient(ellipse 80% 60% at 50% 0%, ${player.color}30 0%, transparent 70%)`,
-            }}
-          />
-        )}
-        {/* Bottom fade to page background */}
-        <div className="absolute inset-0 bg-hero-fade" />
+      {/* overflow-visible so the frosted card can translate-y out the bottom */}
+      <div className="relative h-56 sm:h-72">
+        {/* Image is clipped inside its own wrapper — the card is not */}
+        <div className="absolute inset-0 overflow-hidden">
+          {legendImg ? (
+            <img
+              src={legendImg}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover object-top scale-110"
+              style={{ filter: 'blur(18px) brightness(0.35) saturate(1.2)' }}
+            />
+          ) : (
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `radial-gradient(ellipse 80% 60% at 50% 0%, ${player.color}30 0%, transparent 70%)`,
+              }}
+            />
+          )}
+          {/* Bottom fade */}
+          <div className="absolute inset-0 bg-hero-fade" />
+        </div>
 
         {/* Back button */}
         <button
