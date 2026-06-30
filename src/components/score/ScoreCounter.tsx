@@ -20,19 +20,23 @@ export default function ScoreCounter() {
 
   return (
     <div className="fixed inset-0 z-30 flex flex-col overflow-hidden">
-      {/* Wallpaper */}
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage: 'url(/score-wallpaper.jpg)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          filter: 'blur(12px) brightness(0.35) saturate(1.1)',
-          transform: 'scale(1.08)',
-        }}
-      />
-      {/* Dark overlay to ensure legibility */}
-      <div className="absolute inset-0 bg-black/40" />
+      {/* Wallpaper — contained so the full image is always visible.
+          On mobile it fills the width; on wider screens the image stays
+          phone-sized and the sides show the dark background. */}
+      <div className="absolute inset-0 bg-[#07101d]">
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: 'url(/score-wallpaper.jpg)',
+            backgroundSize: 'contain',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            filter: 'blur(6px) brightness(0.38) saturate(1.15)',
+          }}
+        />
+      </div>
+      {/* Legibility overlay */}
+      <div className="absolute inset-0 bg-black/35" />
       {/* Format selector — narrow strip in the middle */}
       <div className="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2">
         {/* Format pills */}
