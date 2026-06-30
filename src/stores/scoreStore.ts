@@ -13,6 +13,7 @@ interface ScoreStore {
   player2: ScorePlayer;
   games_p1: number;
   games_p2: number;
+  game_winner: 'player1' | 'player2' | null; // set when a game ends, cleared on confirmGame
   match_over: boolean;
   winner: 'player1' | 'player2' | null;
 
@@ -20,6 +21,7 @@ interface ScoreStore {
   setPlayer: (side: 'player1' | 'player2', name: string, id?: string | null) => void;
   increment: (side: 'player1' | 'player2') => void;
   decrement: (side: 'player1' | 'player2') => void;
+  confirmGame: () => void; // called when user presses "Next Match"
   resetGame: () => void;
   resetMatch: () => void;
 }
@@ -34,6 +36,7 @@ export const useScoreStore = create<ScoreStore>((set, get) => ({
   player2: defaultPlayer('Player 2'),
   games_p1: 0,
   games_p2: 0,
+  game_winner: null,
   match_over: false,
   winner: null,
 
@@ -44,46 +47,57 @@ export const useScoreStore = create<ScoreStore>((set, get) => ({
 
   increment: (side) => {
     const state = get();
-    if (state.match_over) return;
+    if (state.match_over || state.game_winner) return;
 
-    const other = side === 'player1' ? 'player2' : 'player1';
     const current = state[side].score;
     if (current >= 8) return;
 
     const newScore = current + 1;
-    const updatedPlayer = { ...state[side], score: newScore };
 
     if (newScore < 8) {
-      set({ [side]: updatedPlayer });
+      set({ [side]: { ...state[side], score: newScore } });
       return;
     }
 
-    // Game won — tally series
+    // Score hit 8 — pause and show game-win overlay
+    set({
+      [side]: { ...state[side], score: newScore },
+      game_winner: side,
+    });
+  },
+
+  confirmGame: () => {
+    const state = get();
+    if (!state.game_winner) return;
+
+    const side = state.game_winner;
+    const other = side === 'player1' ? 'player2' : 'player1';
     const gKey = side === 'player1' ? 'games_p1' : 'games_p2';
     const newGames = state[gKey] + 1;
     const needed = WINS_NEEDED[state.format];
 
     if (newGames >= needed) {
-      // Match over
+      // Series over
       set({
-        [side]: updatedPlayer,
         [gKey]: newGames,
+        game_winner: null,
         match_over: true,
         winner: side,
       });
     } else {
-      // Start next game
+      // More games — reset scores, update circles
       set({
-        [side]: { ...updatedPlayer, score: 0 },
+        [side]: { ...state[side], score: 0 },
         [other]: { ...state[other], score: 0 },
         [gKey]: newGames,
+        game_winner: null,
       });
     }
   },
 
   decrement: (side) => {
     const state = get();
-    if (state.match_over) return;
+    if (state.match_over || state.game_winner) return;
     const current = state[side].score;
     if (current <= 0) return;
     set({ [side]: { ...state[side], score: current - 1 } });
@@ -93,6 +107,7 @@ export const useScoreStore = create<ScoreStore>((set, get) => ({
     set((s) => ({
       player1: { ...s.player1, score: 0 },
       player2: { ...s.player2, score: 0 },
+      game_winner: null,
     })),
 
   resetMatch: () =>
@@ -101,6 +116,7 @@ export const useScoreStore = create<ScoreStore>((set, get) => ({
       player2: { ...s.player2, score: 0 },
       games_p1: 0,
       games_p2: 0,
+      game_winner: null,
       match_over: false,
       winner: null,
     })),

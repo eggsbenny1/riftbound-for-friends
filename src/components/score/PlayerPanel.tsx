@@ -14,6 +14,7 @@ export default function PlayerPanel({ side, flipped }: Props) {
   const games = useScoreStore((s) => side === 'player1' ? s.games_p1 : s.games_p2);
   const format = useScoreStore((s) => s.format);
   const matchOver = useScoreStore((s) => s.match_over);
+  const gameWinner = useScoreStore((s) => s.game_winner);
   const winner = useScoreStore((s) => s.winner);
   const increment = useScoreStore((s) => s.increment);
   const decrement = useScoreStore((s) => s.decrement);
@@ -68,7 +69,7 @@ export default function PlayerPanel({ side, flipped }: Props) {
       </div>
 
       {/* +/- buttons */}
-      {!matchOver && (
+      {!matchOver && !gameWinner && (
         <div className={cn('flex gap-4', flipped && 'rotate-180')}>
           <button
             onPointerDown={(e) => { e.preventDefault(); decrement(side); }}

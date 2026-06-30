@@ -7,6 +7,7 @@ import MatchCard from '@/components/match/MatchCard';
 import MatchupTable from '@/components/match/MatchupTable';
 import DeckSection from '@/components/deck/DeckSection';
 import type { Deck, DeckCard, Match, MatchupStat, Player, PlayerStats } from '@/types';
+import { getPlayerBanner } from '@/lib/playerBanners';
 
 type ProfileData = {
   player: Player;
@@ -105,6 +106,7 @@ export default function PlayerProfile() {
 
   const { player, stats, activeDeck, decks, matches, matchups, allPlayers } = data;
   const legendImg = activeDeck?.legend_image_url;
+  const bannerImg = getPlayerBanner(player.display_name);
   const wins = stats?.wins ?? 0;
   const losses = stats?.losses ?? 0;
   const total = stats?.total_games ?? 0;
@@ -113,28 +115,43 @@ export default function PlayerProfile() {
   return (
     <div className="-mt-10 -mx-6">
       {/* ── Hero ─────────────────────────────────────────── */}
-      {/* overflow-visible so the frosted card can translate-y out the bottom */}
-      <div className="relative h-56 sm:h-72">
-        {/* Image is clipped inside its own wrapper — the card is not */}
-        <div className="absolute inset-0 overflow-hidden">
-          {legendImg ? (
-            <img
-              src={legendImg}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover object-top scale-110"
-              style={{ filter: 'blur(18px) brightness(0.35) saturate(1.2)' }}
-            />
-          ) : (
-            <div
-              className="absolute inset-0"
-              style={{
-                background: `radial-gradient(ellipse 80% 60% at 50% 0%, ${player.color}30 0%, transparent 70%)`,
-              }}
-            />
-          )}
-          {/* Bottom fade */}
-          <div className="absolute inset-0 bg-hero-fade" />
-        </div>
+      <div className="relative h-64 sm:h-80 overflow-hidden">
+        {/* Dark base */}
+        <div className="absolute inset-0" style={{ background: '#07101d' }} />
+        {bannerImg ? (
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url(${bannerImg.src})`,
+              backgroundSize: 'cover',
+              backgroundPosition: bannerImg.position,
+              filter: 'blur(3px) brightness(0.55) saturate(1.1)',
+              transform: 'scale(1.04)',
+            }}
+          />
+        ) : player.avatar_url ? (
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url(${player.avatar_url})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center top',
+              filter: 'blur(3px) brightness(0.55) saturate(1.1)',
+              transform: 'scale(1.04)',
+            }}
+          />
+        ) : (
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(ellipse 80% 60% at 50% 30%, ${player.color}50 0%, transparent 70%)`,
+            }}
+          />
+        )}
+        {/* Subtle dark overlay so text stays readable */}
+        <div className="absolute inset-0 bg-black/20" />
+        {/* Bottom fade into page background */}
+        <div className="absolute inset-0 bg-hero-fade" />
 
         {/* Back button */}
         <button
@@ -146,11 +163,11 @@ export default function PlayerProfile() {
           <ArrowLeft size={13} /> Back
         </button>
 
-        {/* Frosted glass profile card — centered, overlapping the fade */}
-        <div className="absolute bottom-0 left-6 right-6 sm:left-1/2 sm:right-auto sm:-translate-x-1/2
-          z-10 translate-y-1/2 flex items-center gap-5
-          rounded-2xl border border-white/10 bg-white/[0.07] backdrop-blur-xl
-          px-6 py-5 shadow-modal">
+        {/* Profile pill — centered inside the hero */}
+        <div className="absolute inset-x-6 bottom-8 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2
+          z-10 flex items-center gap-5
+          rounded-2xl border border-white/10 bg-white/[0.08] backdrop-blur-xl
+          px-6 py-5 shadow-modal sm:min-w-[340px]">
           <div
             className="h-16 w-16 rounded-2xl overflow-hidden border-2 shrink-0 shadow-lg"
             style={{ borderColor: player.color }}
@@ -179,7 +196,7 @@ export default function PlayerProfile() {
       </div>
 
       {/* ── Stats bar ─────────────────────────────────────── */}
-      <div className="mt-14 sm:mt-12 px-6">
+      <div className="mt-6 px-6">
         <div className="flex justify-around rounded-2xl border border-border/60 bg-card shadow-card py-5">
           {[
             { label: 'Wins',   value: wins,   color: wins > 0 ? '#4ade80' : undefined },

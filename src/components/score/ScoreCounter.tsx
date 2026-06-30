@@ -17,6 +17,7 @@ export default function ScoreCounter() {
   }, []);
 
   const winnerName = store.winner === 'player1' ? store.player1.name : store.player2.name;
+  const gameWinnerName = store.game_winner === 'player1' ? store.player1.name : store.player2.name;
 
   return (
     <div className="fixed inset-0 z-30 flex flex-col overflow-hidden">
@@ -99,20 +100,37 @@ export default function ScoreCounter() {
         <PlayerPanel side="player2" />
       </div>
 
+      {/* Game-win overlay (Bo3/Bo5 mid-series) */}
+      {store.game_winner && !store.match_over && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-5 bg-black/75 backdrop-blur-md">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/40">Game Over</p>
+          <p className="text-5xl font-black uppercase tracking-tight text-foreground">
+            {gameWinnerName}
+          </p>
+          <p className="text-lg font-semibold text-primary">wins this game</p>
+          <button
+            onClick={() => store.confirmGame()}
+            className="mt-4 rounded-2xl bg-primary px-10 py-4 text-base font-bold text-primary-foreground shadow-primary hover:brightness-110 active:scale-[0.97] transition-all"
+          >
+            Next Game →
+          </button>
+        </div>
+      )}
+
       {/* Match over overlay */}
       {store.match_over && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 bg-black/70 backdrop-blur-sm">
-          <Trophy size={64} className="text-yellow-400" />
-          <p className="text-4xl font-black text-foreground">{winnerName} wins!</p>
-          <p className="text-lg text-muted-foreground">
-            {store.format !== 'bo1'
-              ? `${store.games_p1}–${store.games_p2} series`
-              : `${store.player1.score}–${store.player2.score}`}
-          </p>
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 bg-black/75 backdrop-blur-md">
+          <Trophy size={56} className="text-yellow-400" />
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/40">Series Over</p>
+          <p className="text-5xl font-black uppercase tracking-tight text-foreground">{winnerName}</p>
+          <p className="text-lg font-semibold text-primary">wins the match</p>
+          {store.format !== 'bo1' && (
+            <p className="text-sm text-muted-foreground">{store.games_p1}–{store.games_p2}</p>
+          )}
           <div className="flex gap-3 mt-2">
             <button
               onClick={() => setSaveOpen(true)}
-              className="rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground hover:bg-primary/90"
+              className="rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground hover:brightness-110"
             >
               Save Match
             </button>
