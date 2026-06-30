@@ -1,15 +1,17 @@
 import { Minus, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useScoreStore } from '@/stores/scoreStore';
+import type { Player } from '@/types';
 
 type Side = 'player1' | 'player2';
 
 type Props = {
   side: Side;
   flipped?: boolean;
+  players: Player[];
 };
 
-export default function PlayerPanel({ side, flipped }: Props) {
+export default function PlayerPanel({ side, flipped, players }: Props) {
   const player = useScoreStore((s) => s[side]);
   const games = useScoreStore((s) => side === 'player1' ? s.games_p1 : s.games_p2);
   const format = useScoreStore((s) => s.format);
@@ -18,10 +20,12 @@ export default function PlayerPanel({ side, flipped }: Props) {
   const winner = useScoreStore((s) => s.winner);
   const increment = useScoreStore((s) => s.increment);
   const decrement = useScoreStore((s) => s.decrement);
+  const setPlayer = useScoreStore((s) => s.setPlayer);
 
   const isWinning = player.score === 8 || winner === side;
   const isLoser = winner && winner !== side;
   const isBo = format !== 'bo1';
+  const blocked = matchOver || !!gameWinner;
 
   return (
     <div
@@ -33,14 +37,30 @@ export default function PlayerPanel({ side, flipped }: Props) {
         isLoser && 'bg-white/5 opacity-70'
       )}
     >
-      {/* Player name */}
-      <p className={cn(
-        'text-lg font-bold tracking-wide',
-        flipped && 'rotate-180',
-        isLoser ? 'text-muted-foreground' : 'text-foreground'
-      )}>
-        {player.name}
-      </p>
+      {/* Player name / selector */}
+      <div className={cn(flipped && 'rotate-180')}>
+        {blocked ? (
+          <p className={cn('text-lg font-bold tracking-wide', isLoser ? 'text-muted-foreground' : 'text-foreground')}>
+            {player.name}
+          </p>
+        ) : (
+          <select
+            value={player.id ?? ''}
+            onChange={(e) => {
+              const p = players.find((x) => x.id === e.target.value);
+              setPlayer(side, p?.display_name ?? (side === 'player1' ? 'Player 1' : 'Player 2'), p?.id ?? null);
+            }}
+            className="bg-transparent text-lg font-bold tracking-wide text-foreground text-center appearance-none cursor-pointer focus:outline-none"
+          >
+            <option value="">{side === 'player1' ? 'Player 1' : 'Player 2'}</option>
+            {players.map((p) => (
+              <option key={p.id} value={p.id} className="bg-card text-foreground">
+                {p.display_name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
       {/* Series game pips for bo3/bo5 */}
       {isBo && (
@@ -69,21 +89,21 @@ export default function PlayerPanel({ side, flipped }: Props) {
       </div>
 
       {/* +/- buttons */}
-      {!matchOver && !gameWinner && (
-        <div className={cn('flex gap-4', flipped && 'rotate-180')}>
+      {!blocked && (
+        <div className={cn('flex gap-5', flipped && 'rotate-180')}>
           <button
             onPointerDown={(e) => { e.preventDefault(); decrement(side); }}
-            className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/10 text-foreground active:scale-95 active:bg-white/20 transition-transform"
+            className="flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 text-foreground active:scale-95 active:bg-white/20 transition-transform"
             aria-label="Decrease score"
           >
-            <Minus size={32} />
+            <Minus size={36} />
           </button>
           <button
             onPointerDown={(e) => { e.preventDefault(); increment(side); }}
-            className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/80 text-primary-foreground active:scale-95 active:bg-primary transition-transform"
+            className="flex h-24 w-24 items-center justify-center rounded-2xl bg-primary/80 text-primary-foreground active:scale-95 active:bg-primary transition-transform"
             aria-label="Increase score"
           >
-            <Plus size={32} />
+            <Plus size={36} />
           </button>
         </div>
       )}

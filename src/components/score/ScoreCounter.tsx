@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Trophy, RotateCcw, Users, History, Shield } from 'lucide-react';
+import { Trophy, RotateCcw, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useScoreStore } from '@/stores/scoreStore';
@@ -41,7 +41,6 @@ export default function ScoreCounter() {
       <div className="absolute inset-0 bg-black/35" />
       {/* Format selector — narrow strip in the middle */}
       <div className="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2">
-        {/* Format pills */}
         {!store.match_over && (
           <div className="flex gap-1 rounded-full border border-white/20 bg-card/80 backdrop-blur-sm p-1">
             {(['bo1', 'bo3', 'bo5'] as MatchFormat[]).map((f) => (
@@ -57,48 +56,17 @@ export default function ScoreCounter() {
             ))}
           </div>
         )}
-
-        {/* Player name selectors */}
-        {!store.match_over && (
-          <div className="flex gap-2">
-            <select
-              value={store.player1.id ?? ''}
-              onChange={(e) => {
-                const p = players.find((x) => x.id === e.target.value);
-                store.setPlayer('player1', p?.display_name ?? 'Player 1', p?.id ?? null);
-              }}
-              className="rounded-lg border border-white/10 bg-card/80 backdrop-blur-sm px-2 py-1 text-xs text-foreground focus:outline-none"
-            >
-              <option value="">Player 1</option>
-              {players.map((p) => <option key={p.id} value={p.id}>{p.display_name}</option>)}
-            </select>
-            <span className="text-xs text-muted-foreground self-center">vs</span>
-            <select
-              value={store.player2.id ?? ''}
-              onChange={(e) => {
-                const p = players.find((x) => x.id === e.target.value);
-                store.setPlayer('player2', p?.display_name ?? 'Player 2', p?.id ?? null);
-              }}
-              className="rounded-lg border border-white/10 bg-card/80 backdrop-blur-sm px-2 py-1 text-xs text-foreground focus:outline-none"
-            >
-              <option value="">Player 2</option>
-              {players.map((p) => <option key={p.id} value={p.id}>{p.display_name}</option>)}
-            </select>
-          </div>
-        )}
-
-        {/* Divider line */}
         <div className="w-12 h-px bg-white/20" />
       </div>
 
       {/* Player 1 — top half, rotated so P1 faces upward on the table */}
       <div className="flex-1 border-b border-white/10">
-        <PlayerPanel side="player1" flipped />
+        <PlayerPanel side="player1" flipped players={players} />
       </div>
 
       {/* Player 2 — bottom half */}
       <div className="flex-1">
-        <PlayerPanel side="player2" />
+        <PlayerPanel side="player2" players={players} />
       </div>
 
       {/* Game-win overlay (Bo3/Bo5 mid-series) */}
@@ -155,25 +123,14 @@ export default function ScoreCounter() {
         </button>
       )}
 
-      {/* Compact nav — bottom-left, opposite the reset button */}
+      {/* Home pill — bottom-left, opposite the reset button */}
       {!store.match_over && (
-        <div className="absolute bottom-4 left-4 z-10 flex items-center gap-1">
-          {[
-            { to: '/',        icon: Users,   label: 'Players' },
-            { to: '/matches', icon: History, label: 'Matches' },
-            { to: '/admin',   icon: Shield,  label: 'Admin'   },
-          ].map(({ to, icon: Icon, label }) => (
-            <Link
-              key={to}
-              to={to}
-              className="flex items-center gap-1 rounded-lg border border-white/10 bg-card/80 backdrop-blur-sm px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              aria-label={label}
-            >
-              <Icon size={12} />
-              <span>{label}</span>
-            </Link>
-          ))}
-        </div>
+        <Link
+          to="/"
+          className="absolute bottom-4 left-4 z-10 flex items-center gap-1.5 rounded-lg border border-white/10 bg-card/80 backdrop-blur-sm px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Home size={12} /> Home
+        </Link>
       )}
 
       <SaveMatchModal
