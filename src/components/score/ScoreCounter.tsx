@@ -56,7 +56,6 @@ export default function ScoreCounter() {
             ))}
           </div>
         )}
-        <div className="w-12 h-px bg-white/20" />
       </div>
 
       {/* Player 1 — top half, rotated so P1 faces upward on the table */}

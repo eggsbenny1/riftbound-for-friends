@@ -59,11 +59,21 @@ export const useScoreStore = create<ScoreStore>((set, get) => ({
       return;
     }
 
-    // Score hit 8 — pause and show game-win overlay
-    set({
-      [side]: { ...state[side], score: newScore },
-      game_winner: side,
-    });
+    // Score hit 8 — for bo1 go straight to match over; for bo3/bo5 pause for overlay
+    if (state.format === 'bo1') {
+      set({
+        [side]: { ...state[side], score: newScore },
+        games_p1: side === 'player1' ? 1 : 0,
+        games_p2: side === 'player2' ? 1 : 0,
+        match_over: true,
+        winner: side,
+      });
+    } else {
+      set({
+        [side]: { ...state[side], score: newScore },
+        game_winner: side,
+      });
+    }
   },
 
   confirmGame: () => {
