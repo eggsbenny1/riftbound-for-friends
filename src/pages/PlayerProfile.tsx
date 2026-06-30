@@ -105,7 +105,6 @@ export default function PlayerProfile() {
   }
 
   const { player, stats, activeDeck, decks, matches, matchups, allPlayers } = data;
-  const legendImg = activeDeck?.legend_image_url;
   const bannerImg = getPlayerBanner(player.display_name);
   const wins = stats?.wins ?? 0;
   const losses = stats?.losses ?? 0;
