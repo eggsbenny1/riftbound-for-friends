@@ -17,6 +17,27 @@ export default function ScoreCounter() {
       .then(({ data }) => setPlayers((data as Player[]) ?? []));
   }, []);
 
+  // Keep screen awake while score counter is open
+  useEffect(() => {
+    const nav = navigator as any;
+    if (!nav.wakeLock) return;
+    let lock: any = null;
+
+    async function acquire() {
+      try { lock = await nav.wakeLock.request('screen'); } catch { /* unsupported */ }
+    }
+
+    acquire();
+
+    const onVisible = () => { if (document.visibilityState === 'visible') acquire(); };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      lock?.release();
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
+
   const winnerName = store.winner === 'player1' ? store.player1.name : store.player2.name;
   const gameWinnerName = store.game_winner === 'player1' ? store.player1.name : store.player2.name;
 

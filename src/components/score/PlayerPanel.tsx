@@ -37,10 +37,10 @@ export default function PlayerPanel({ side, flipped, players }: Props) {
         isLoser && 'bg-white/5 opacity-70'
       )}
     >
-      {/* Player name / selector */}
-      <div className={cn(flipped && 'rotate-180')}>
+      {/* Player name / selector — counter-rotated so it reads correctly from both sides */}
+      <div className={cn('flex justify-center w-full px-8', flipped && 'rotate-180')}>
         {blocked ? (
-          <p className={cn('text-lg font-bold tracking-wide', isLoser ? 'text-muted-foreground' : 'text-foreground')}>
+          <p className={cn('text-lg font-bold tracking-wide text-center', isLoser ? 'text-muted-foreground' : 'text-foreground')}>
             {player.name}
           </p>
         ) : (
@@ -50,7 +50,7 @@ export default function PlayerPanel({ side, flipped, players }: Props) {
               const p = players.find((x) => x.id === e.target.value);
               setPlayer(side, p?.display_name ?? (side === 'player1' ? 'Player 1' : 'Player 2'), p?.id ?? null);
             }}
-            className="bg-transparent text-lg font-bold tracking-wide text-foreground text-center appearance-none cursor-pointer focus:outline-none"
+            className="bg-transparent text-lg font-bold tracking-wide text-foreground text-center appearance-none cursor-pointer focus:outline-none w-full"
           >
             <option value="">{side === 'player1' ? 'Player 1' : 'Player 2'}</option>
             {players.map((p) => (
