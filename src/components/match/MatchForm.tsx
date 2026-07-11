@@ -1,313 +1,345 @@
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { X, Plus } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { X, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import type { Deck, MatchTag, Player } from '@/types';
+import type { MatchFormat, Player } from '@/types';
 
-const TAG_OPTIONS: MatchTag[] = [
-  'close game', 'stomp', 'misplay', 'deck test', 'new legend', 'comeback', 'rematch',
-];
+type CardNote = { card_id: string; name: string; role: 'add' | 'remove' | 'note' };
 
-const schema = z.object({
-  played_at: z.string().min(1, 'Date required'),
-  format: z.enum(['bo1', 'bo3', 'bo5']),
-  player1_id: z.string().uuid('Select player 1'),
-  player2_id: z.string().uuid('Select player 2'),
-  deck1_id: z.string().optional(),
-  deck2_id: z.string().optional(),
-  score_p1: z.coerce.number().min(0).max(8),
-  score_p2: z.coerce.number().min(0).max(8),
-  games_p1: z.coerce.number().min(0),
-  games_p2: z.coerce.number().min(0),
-  winner_id: z.string().uuid('Select winner'),
-  battlefield: z.string().optional(),
-  notes: z.string().optional(),
-}).refine((d) => d.player1_id !== d.player2_id, {
-  message: 'Players must be different',
-  path: ['player2_id'],
-});
-
-type FormValues = z.infer<typeof schema>;
+type Prefill = {
+  format?: MatchFormat;
+  player1_id?: string;
+  player2_id?: string;
+  winner_id?: string;
+  games_p1?: number;
+  games_p2?: number;
+};
 
 type Props = {
   onSaved?: () => void;
   onCancel?: () => void;
-  prefill?: Partial<FormValues & { tags?: MatchTag[] }>;
+  prefill?: Prefill;
+};
+
+const ROLE_LABELS: Record<CardNote['role'], string> = {
+  add:    'Add to sideboard',
+  remove: 'Remove from sideboard',
+  note:   'Notable',
 };
 
 export default function MatchForm({ onSaved, onCancel, prefill }: Props) {
   const [players, setPlayers] = useState<Player[]>([]);
-  const [decks1, setDecks1] = useState<Deck[]>([]);
-  const [decks2, setDecks2] = useState<Deck[]>([]);
-  const [tags, setTags] = useState<MatchTag[]>(prefill?.tags ?? []);
-  const [moments, setMoments] = useState<string[]>(['']);
+  const [legends, setLegends] = useState<{ id: string; name: string; tags: string }[]>([]);
+  const [allCards, setAllCards] = useState<{ id: string; name: string; card_type: string; tags: string }[]>([]);
+
+  // Form state — seeded from prefill (score counter save flow)
+  const [format, setFormat] = useState<MatchFormat>(prefill?.format ?? 'bo1');
+  const [p1Id, setP1Id] = useState(prefill?.player1_id ?? '');
+  const [p2Id, setP2Id] = useState(prefill?.player2_id ?? '');
+  const [legend1Id, setLegend1Id] = useState('');
+  const [legend2Id, setLegend2Id] = useState('');
+  const [gamesP1, setGamesP1] = useState(prefill?.games_p1 ?? 0);
+  const [gamesP2, setGamesP2] = useState(prefill?.games_p2 ?? 0);
+  const [winnerId, setWinnerId] = useState(prefill?.winner_id ?? '');
+  const [date, setDate] = useState('');
+  const [notes, setNotes] = useState('');
+  const [cardNotes, setCardNotes] = useState<CardNote[]>([]);
+  const [cardSearch, setCardSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const now = new Date();
-  const localNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      played_at: prefill?.played_at ?? localNow,
-      format: prefill?.format ?? 'bo1',
-      player1_id: prefill?.player1_id ?? '',
-      player2_id: prefill?.player2_id ?? '',
-      deck1_id: prefill?.deck1_id ?? '',
-      deck2_id: prefill?.deck2_id ?? '',
-      score_p1: prefill?.score_p1 ?? 0,
-      score_p2: prefill?.score_p2 ?? 0,
-      games_p1: prefill?.games_p1 ?? 0,
-      games_p2: prefill?.games_p2 ?? 0,
-      winner_id: prefill?.winner_id ?? '',
-      battlefield: prefill?.battlefield ?? '',
-      notes: prefill?.notes ?? '',
-    },
-  });
-
-  const p1Id = watch('player1_id');
-  const p2Id = watch('player2_id');
-  const format = watch('format');
 
   useEffect(() => {
     supabase.from('players').select('*').eq('is_active', true).order('display_name')
       .then(({ data }) => setPlayers((data as Player[]) ?? []));
+    supabase.from('cards').select('id,name,card_type,tags').eq('card_type', 'Legend').order('tags')
+      .then(({ data }) => setLegends((data as any[]) ?? []));
+    supabase.from('cards').select('id,name,card_type,tags').order('name')
+      .then(({ data }) => setAllCards((data as any[]) ?? []));
   }, []);
 
+  // Auto-derive winner for Bo3/5
   useEffect(() => {
-    if (!p1Id) { setDecks1([]); return; }
-    supabase.from('decks').select('*').eq('player_id', p1Id).order('name')
-      .then(({ data }) => setDecks1((data as Deck[]) ?? []));
-  }, [p1Id]);
+    if (format === 'bo1') return;
+    const needed = format === 'bo3' ? 2 : 3;
+    if (gamesP1 >= needed && p1Id) setWinnerId(p1Id);
+    else if (gamesP2 >= needed && p2Id) setWinnerId(p2Id);
+  }, [gamesP1, gamesP2, p1Id, p2Id, format]);
 
-  useEffect(() => {
-    if (!p2Id) { setDecks2([]); return; }
-    supabase.from('decks').select('*').eq('player_id', p2Id).order('name')
-      .then(({ data }) => setDecks2((data as Deck[]) ?? []));
-  }, [p2Id]);
+  const cardSearchResults = useMemo(() => {
+    const q = cardSearch.toLowerCase().trim();
+    if (!q) return [];
+    return allCards
+      .filter((c) => {
+        const already = cardNotes.some((n) => n.card_id === c.id);
+        return !already && (c.name.toLowerCase().includes(q) || (c.tags ?? '').toLowerCase().includes(q));
+      })
+      .slice(0, 8);
+  }, [cardSearch, allCards, cardNotes]);
 
-  function toggleTag(t: MatchTag) {
-    setTags((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]);
+  function addCard(card: { id: string; name: string }) {
+    setCardNotes((prev) => [...prev, { card_id: card.id, name: card.name, role: 'note' }]);
+    setCardSearch('');
   }
 
-  async function onSubmit(values: FormValues) {
+  function updateCardRole(idx: number, role: CardNote['role']) {
+    setCardNotes((prev) => prev.map((c, i) => i === idx ? { ...c, role } : c));
+  }
+
+  function removeCard(idx: number) {
+    setCardNotes((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!p1Id || !p2Id || p1Id === p2Id) { setError('Select two different players'); return; }
+    if (!winnerId) { setError('Select a winner'); return; }
     setSaving(true);
     setError(null);
 
+    const playedAt = date
+      ? new Date(date).toISOString()
+      : new Date().toISOString();
+
+    const isBoSeries = format !== 'bo1';
     const { data: match, error: mErr } = await supabase.from('matches').insert({
-      played_at: values.played_at,
-      format: values.format,
-      player1_id: values.player1_id,
-      player2_id: values.player2_id,
-      deck1_id: values.deck1_id || null,
-      deck2_id: values.deck2_id || null,
-      score_p1: values.score_p1,
-      score_p2: values.score_p2,
-      games_p1: values.games_p1,
-      games_p2: values.games_p2,
-      winner_id: values.winner_id,
-      battlefield: values.battlefield || null,
-      notes: values.notes || null,
-      tags,
+      played_at: playedAt,
+      format,
+      player1_id: p1Id,
+      player2_id: p2Id,
+      score_p1: 0,
+      score_p2: 0,
+      games_p1: isBoSeries ? gamesP1 : (winnerId === p1Id ? 1 : 0),
+      games_p2: isBoSeries ? gamesP2 : (winnerId === p2Id ? 1 : 0),
+      winner_id: winnerId,
+      notes: notes || null,
     }).select().single();
 
-    if (mErr || !match) { setError(mErr?.message ?? 'Failed to save match'); setSaving(false); return; }
+    if (mErr || !match) { setError(mErr?.message ?? 'Failed to save'); setSaving(false); return; }
 
-    const momentRows = moments.filter((m) => m.trim()).map((description) => ({
-      match_id: match.id,
-      description,
-    }));
-    if (momentRows.length) await supabase.from('match_moments').insert(momentRows);
+    // Save legend picks + card notes as match_moments
+    const rows = [
+      ...(legend1Id ? [{ match_id: match.id, description: `LEGEND:p1:${legend1Id}:${legends.find(l => l.id === legend1Id)?.tags ?? ''}` }] : []),
+      ...(legend2Id ? [{ match_id: match.id, description: `LEGEND:p2:${legend2Id}:${legends.find(l => l.id === legend2Id)?.tags ?? ''}` }] : []),
+      ...cardNotes.map((c) => ({ match_id: match.id, description: `CARD:${c.role}:${c.card_id}:${c.name}` })),
+    ];
+    if (rows.length) await supabase.from('match_moments').insert(rows);
 
     setSaving(false);
     onSaved?.();
   }
 
-  const isBoSeries = format === 'bo3' || format === 'bo5';
+  const needsWinner = format === 'bo1';
+  const p1 = players.find((p) => p.id === p1Id);
+  const p2 = players.find((p) => p.id === p2Id);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      {/* Date + Format */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label className="label">Date & Time</label>
-          <input type="datetime-local" {...register('played_at')}
-            className="input w-full" />
-          {errors.played_at && <p className="err">{errors.played_at.message}</p>}
-        </div>
-        <div>
-          <label className="label">Format</label>
-          <select {...register('format')} className="input w-full">
-            <option value="bo1">Bo1</option>
-            <option value="bo3">Bo3</option>
-            <option value="bo5">Bo5</option>
-          </select>
-        </div>
-      </div>
+    <form onSubmit={onSubmit} className="space-y-5">
 
-      {/* Players */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label className="label">Player 1</label>
-          <select {...register('player1_id')} className="input w-full">
-            <option value="">— Select —</option>
-            {players.map((p) => <option key={p.id} value={p.id}>{p.display_name}</option>)}
-          </select>
-          {errors.player1_id && <p className="err">{errors.player1_id.message}</p>}
-        </div>
-        <div>
-          <label className="label">Player 2</label>
-          <select {...register('player2_id')} className="input w-full">
-            <option value="">— Select —</option>
-            {players.map((p) => <option key={p.id} value={p.id}>{p.display_name}</option>)}
-          </select>
-          {errors.player2_id && <p className="err">{errors.player2_id.message}</p>}
-        </div>
-      </div>
-
-      {/* Decks */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label className="label">P1 Deck</label>
-          <select {...register('deck1_id')} className="input w-full" disabled={!p1Id}>
-            <option value="">— None —</option>
-            {decks1.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="label">P2 Deck</label>
-          <select {...register('deck2_id')} className="input w-full" disabled={!p2Id}>
-            <option value="">— None —</option>
-            {decks2.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
-        </div>
-      </div>
-
-      {/* Scores */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label className="label">P1 Score (0–8)</label>
-          <input type="number" min={0} max={8} {...register('score_p1')} className="input w-full" />
-        </div>
-        <div>
-          <label className="label">P2 Score (0–8)</label>
-          <input type="number" min={0} max={8} {...register('score_p2')} className="input w-full" />
-        </div>
-      </div>
-
-      {isBoSeries && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="label">P1 Game Wins</label>
-            <input type="number" min={0} {...register('games_p1')} className="input w-full" />
-          </div>
-          <div>
-            <label className="label">P2 Game Wins</label>
-            <input type="number" min={0} {...register('games_p2')} className="input w-full" />
-          </div>
-        </div>
-      )}
-
-      {/* Winner */}
+      {/* Format */}
       <div>
-        <label className="label">Winner</label>
-        <select {...register('winner_id')} className="input w-full">
-          <option value="">— Select winner —</option>
-          {players.filter((p) => p.id === p1Id || p.id === p2Id).map((p) => (
-            <option key={p.id} value={p.id}>{p.display_name}</option>
-          ))}
-        </select>
-        {errors.winner_id && <p className="err">{errors.winner_id.message}</p>}
-      </div>
-
-      {/* Battlefield */}
-      <div>
-        <label className="label">Battlefield (optional)</label>
-        <input type="text" {...register('battlefield')} placeholder="e.g. Reckoner's Arena" className="input w-full" />
-      </div>
-
-      {/* Tags */}
-      <div>
-        <label className="label">Tags</label>
-        <div className="flex flex-wrap gap-2 mt-1">
-          {TAG_OPTIONS.map((t) => (
+        <label className="label">Format</label>
+        <div className="flex gap-1 mt-1 rounded-xl border border-border/60 bg-secondary p-1 w-fit">
+          {(['bo1', 'bo3', 'bo5'] as MatchFormat[]).map((f) => (
             <button
-              key={t}
+              key={f}
               type="button"
-              onClick={() => toggleTag(t)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                tags.includes(t)
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-muted-foreground hover:text-foreground'
+              onClick={() => { setFormat(f); setGamesP1(0); setGamesP2(0); setWinnerId(''); }}
+              className={`rounded-lg px-4 py-1.5 text-xs font-bold uppercase transition-colors ${
+                format === f ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              {t}
+              {f}
             </button>
           ))}
         </div>
       </div>
 
+      {/* Players + Legends */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        {/* Player 1 */}
+        <div className="space-y-2">
+          <div>
+            <label className="label">Player 1</label>
+            <select value={p1Id} onChange={(e) => setP1Id(e.target.value)} className="input w-full">
+              <option value="">— Select —</option>
+              {players.filter((p) => p.id !== p2Id).map((p) => (
+                <option key={p.id} value={p.id}>{p.display_name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Legend</label>
+            <select value={legend1Id} onChange={(e) => setLegend1Id(e.target.value)} className="input w-full" disabled={!p1Id}>
+              <option value="">— Pick champion —</option>
+              {legends.map((l) => (
+                <option key={l.id} value={l.id}>{l.tags} ({l.name})</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Player 2 */}
+        <div className="space-y-2">
+          <div>
+            <label className="label">Player 2</label>
+            <select value={p2Id} onChange={(e) => setP2Id(e.target.value)} className="input w-full">
+              <option value="">— Select —</option>
+              {players.filter((p) => p.id !== p1Id).map((p) => (
+                <option key={p.id} value={p.id}>{p.display_name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Legend</label>
+            <select value={legend2Id} onChange={(e) => setLegend2Id(e.target.value)} className="input w-full" disabled={!p2Id}>
+              <option value="">— Pick champion —</option>
+              {legends.map((l) => (
+                <option key={l.id} value={l.id}>{l.tags} ({l.name})</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Score */}
+      {needsWinner ? (
+        <div>
+          <label className="label">Winner</label>
+          <div className="flex gap-2 mt-1">
+            {[p1, p2].map((p) => p && (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setWinnerId(p.id)}
+                className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
+                  winnerId === p.id
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {p.display_name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div>
+          <label className="label">Score</label>
+          <div className="flex items-center gap-3 mt-1">
+            <div className="flex-1 text-center">
+              <p className="text-xs text-muted-foreground mb-1">{p1?.display_name ?? 'Player 1'}</p>
+              <div className="flex items-center justify-center gap-2">
+                <button type="button" onClick={() => setGamesP1((n) => Math.max(0, n - 1))}
+                  className="h-8 w-8 rounded-lg bg-secondary text-foreground hover:bg-secondary/80 text-lg font-bold">−</button>
+                <span className="text-3xl font-black w-8 text-center">{gamesP1}</span>
+                <button type="button" onClick={() => setGamesP1((n) => Math.min(format === 'bo3' ? 2 : 3, n + 1))}
+                  className="h-8 w-8 rounded-lg bg-secondary text-foreground hover:bg-secondary/80 text-lg font-bold">+</button>
+              </div>
+            </div>
+            <span className="text-muted-foreground font-bold text-lg">–</span>
+            <div className="flex-1 text-center">
+              <p className="text-xs text-muted-foreground mb-1">{p2?.display_name ?? 'Player 2'}</p>
+              <div className="flex items-center justify-center gap-2">
+                <button type="button" onClick={() => setGamesP2((n) => Math.max(0, n - 1))}
+                  className="h-8 w-8 rounded-lg bg-secondary text-foreground hover:bg-secondary/80 text-lg font-bold">−</button>
+                <span className="text-3xl font-black w-8 text-center">{gamesP2}</span>
+                <button type="button" onClick={() => setGamesP2((n) => Math.min(format === 'bo3' ? 2 : 3, n + 1))}
+                  className="h-8 w-8 rounded-lg bg-secondary text-foreground hover:bg-secondary/80 text-lg font-bold">+</button>
+              </div>
+            </div>
+          </div>
+          {winnerId && (
+            <p className="mt-2 text-xs text-center text-primary font-medium">
+              {players.find((p) => p.id === winnerId)?.display_name} wins
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Date (optional) */}
+      <div>
+        <label className="label">Date <span className="text-muted-foreground font-normal">(optional — defaults to today)</span></label>
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input w-full" />
+      </div>
+
+      {/* Cards of note */}
+      <div>
+        <label className="label">Cards of Note</label>
+        <div className="relative mt-1">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={cardSearch}
+            onChange={(e) => setCardSearch(e.target.value)}
+            placeholder="Search cards…"
+            className="input w-full pl-8"
+          />
+          {cardSearchResults.length > 0 && (
+            <div className="absolute z-10 mt-1 w-full rounded-xl border border-border bg-card shadow-modal overflow-hidden">
+              {cardSearchResults.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => addCard(c)}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-white/5 flex items-center justify-between"
+                >
+                  <span>{c.name}</span>
+                  <span className="text-xs text-muted-foreground">{c.card_type}{c.tags ? ` · ${c.tags}` : ''}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {cardNotes.length > 0 && (
+          <div className="mt-2 space-y-1.5">
+            {cardNotes.map((c, i) => (
+              <div key={i} className="flex items-center gap-2 rounded-lg border border-border/60 bg-secondary px-3 py-1.5">
+                <span className="text-sm font-medium flex-1 truncate">{c.name}</span>
+                <select
+                  value={c.role}
+                  onChange={(e) => updateCardRole(i, e.target.value as CardNote['role'])}
+                  className="bg-transparent text-xs text-muted-foreground focus:outline-none"
+                >
+                  {(Object.entries(ROLE_LABELS) as [CardNote['role'], string][]).map(([r, label]) => (
+                    <option key={r} value={r}>{label}</option>
+                  ))}
+                </select>
+                <button type="button" onClick={() => removeCard(i)} className="text-muted-foreground hover:text-destructive shrink-0">
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Notes */}
       <div>
         <label className="label">Notes</label>
-        <textarea {...register('notes')} rows={3} placeholder="Match notes…"
-          className="input w-full resize-none" />
-      </div>
-
-      {/* Key moments */}
-      <div>
-        <label className="label">Key Moments</label>
-        <div className="space-y-2">
-          {moments.map((m, i) => (
-            <div key={i} className="flex gap-2">
-              <input
-                type="text"
-                value={m}
-                onChange={(e) => {
-                  const next = [...moments];
-                  next[i] = e.target.value;
-                  setMoments(next);
-                }}
-                placeholder={`Moment ${i + 1}…`}
-                className="input flex-1"
-              />
-              {moments.length > 1 && (
-                <button type="button" onClick={() => setMoments((prev) => prev.filter((_, j) => j !== i))}
-                  className="text-muted-foreground hover:text-destructive">
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => setMoments((prev) => [...prev, ''])}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <Plus size={12} /> Add moment
-          </button>
-        </div>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={3}
+          placeholder="Match notes, observations…"
+          className="input w-full resize-none"
+        />
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      {/* Actions */}
       <div className="flex gap-3 pt-2">
-        <button type="submit" disabled={saving}
-          className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
+        <button
+          type="submit"
+          disabled={saving}
+          className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:brightness-110 disabled:opacity-50"
+        >
           {saving ? 'Saving…' : 'Save Match'}
         </button>
         {onCancel && (
-          <button type="button" onClick={onCancel}
-            className="rounded-xl border border-white/10 px-5 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-xl border border-white/10 px-5 py-3 text-sm font-medium text-muted-foreground hover:text-foreground"
+          >
             Cancel
           </button>
         )}

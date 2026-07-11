@@ -49,8 +49,8 @@ export default function Matches() {
         <h1 className="text-4xl font-bold tracking-tight">Match History</h1>
         <Dialog.Root open={addOpen} onOpenChange={setAddOpen}>
           <Dialog.Trigger asChild>
-            <button className="flex items-center gap-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-              <Plus size={14} /> Add Match
+            <button className="flex items-center gap-1 rounded-lg bg-primary/15 border border-primary/30 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors">
+              <Plus size={12} /> Add Match
             </button>
           </Dialog.Trigger>
           <Dialog.Portal>
