@@ -50,7 +50,8 @@ export default function PlayerPanel({ side, flipped, players }: Props) {
               const p = players.find((x) => x.id === e.target.value);
               setPlayer(side, p?.display_name ?? (side === 'player1' ? 'Player 1' : 'Player 2'), p?.id ?? null);
             }}
-            className="bg-transparent text-lg font-bold tracking-wide text-foreground text-center appearance-none cursor-pointer focus:outline-none w-full"
+            className="bg-transparent text-lg font-bold tracking-wide text-foreground appearance-none cursor-pointer focus:outline-none w-full text-center"
+            style={{ textAlignLast: 'center' }}
           >
             <option value="">{side === 'player1' ? 'Player 1' : 'Player 2'}</option>
             {players.map((p) => (
